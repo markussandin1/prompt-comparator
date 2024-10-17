@@ -1,0 +1,26 @@
+{
+  "name": "prompt-comparator",
+  "version": "1.0.0",
+  "description": "En applikation för att jämföra AI-promptar med hjälp av OpenAI:s API.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "build:css": "tailwindcss -i ./styles.css -o ./public/tailwind.css"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "autoprefixer": "^10.4.20",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.21.1",
+    "express-session": "^1.18.1",
+    "openai": "^4.67.3",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "postcss": "^8.4.47",
+    "string-similarity": "^4.0.4",
+    "tailwindcss": "^3.4.14"
+  }
+}

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Jämför promptar</title>
+  <!-- Inkludera Tailwind CSS -->
+  <link href="/tailwind.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+  <div class="container mx-auto my-8 p-4">
+    <h1 class="text-4xl font-bold mb-6">Jämför promptar</h1>
+    <p class="mb-4">
+      Genom att köra flera iterationer per prompt kan du mäta hur konsekvent modellen svarar.
+      Ett högre konsistensvärde indikerar att modellen ger liknande svar över iterationerna.
+    </p>
+
+    <!-- Systemprompt-sektion -->
+    <div class="bg-white p-4 rounded-lg shadow-md my-4">
+      <h3 class="text-xl font-semibold mb-2">Systemprompt</h3>
+      <button type="button" onclick="toggleSystemPrompt()" class="bg-blue-500 text-white py-1 px-2 mb-2 rounded shadow hover:bg-blue-700">
+        Visa/Dölj Systemprompt
+      </button>
+      <pre id="systemPromptContent" class="bg-gray-200 p-2 rounded break-words whitespace-pre-wrap overflow-auto max-h-96" style="display: none;">
+<%= systemPrompt %>
+      </pre>
+    </div>
+
+    <form action="/compare" method="POST" id="compareForm">
+      <div id="promptsContainer" class="flex flex-wrap -mx-2">
+        <!-- Promptarna kommer att läggas till här dynamiskt -->
+      </div>
+      <button type="button" id="addPromptBtn" class="bg-green-500 text-white py-2 px-4 mt-4 rounded shadow hover:bg-green-700">
+        Lägg till prompt
+      </button>
+
+      <!-- Sektion för förväntad effekt -->
+      <div class="flex flex-wrap -mx-2 my-4">
+        <div class="w-full md:w-1/3 px-2">
+          <label for="expectedResult" class="block text-lg font-medium mb-2">Förväntad effekt (beskrivning):</label>
+          <textarea name="expectedResult" id="expectedResult" rows="4" class="w-full p-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+          <p class="text-sm text-gray-600 mt-1"><em>Beskriv vad du förväntar dig att modellen ska åstadkomma, t.ex. "Rätta alla felstavningar i texten".</em></p>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label for="iterations" class="block text-lg font-medium mb-2">Antal iterationer per prompt:</label>
+        <input type="number" name="iterations" id="iterations" min="1" max="10" value="1" class="w-20 p-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400">
+      </div>
+      <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded shadow hover:bg-blue-700">
+        Kör jämförelse
+      </button>
+    </form>
+
+    <!-- Spinner för att indikera att bearbetning pågår -->
+    <div id="loadingSpinner" class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50 hidden">
+      <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>
+    </div>
+
+    <style>
+      .loader {
+        border-top-color: #3498db;
+        animation: spin 1s infinite linear;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+
+    <script>
+      // Hämta data från servern
+      const compareData = <%- JSON.stringify(compareData || null) %>;
+
+      let promptIndex = 0;
+
+      // Funktion för att skapa ett promptkort
+      function createPromptCard(index, prompt = '', context = '') {
+        const card = document.createElement('div');
+        card.className = 'w-full md:w-1/3 px-2 my-2';
+        card.innerHTML = `
+          <div class="bg-white p-4 rounded-lg shadow-md">
+            <h3 class="font-semibold mb-2">Prompt <span class="prompt-number">${index + 1}</span></h3>
+            <div class="mb-4">
+              <label for="prompts[${index}][prompt]" class="block text-sm font-medium mb-1">Prompt:</label>
+              <textarea name="prompts[${index}][prompt]" rows="4" class="w-full p-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400">${prompt}</textarea>
+            </div>
+            <div class="mb-4">
+              <label for="prompts[${index}][context]" class="block text-sm font-medium mb-1">Kontext:</label>
+              <textarea name="prompts[${index}][context]" rows="4" class="w-full p-2 border rounded shadow focus:outline-none focus:ring-2 focus:ring-blue-400">${context}</textarea>
+            </div>
+            <button type="button" onclick="duplicatePrompt(${index})" class="bg-yellow-500 text-white py-1 px-2 mr-2 rounded shadow hover:bg-yellow-700">Duplicera</button>
+            <button type="button" onclick="removePrompt(${index}, this)" class="bg-red-500 text-white py-1 px-2 rounded shadow hover:bg-red-700">Ta bort</button>
+          </div>
+        `;
+        return card;
+      }
+
+      // Funktion för att lägga till en prompt
+      function addPrompt(prompt = '', context = '') {
+        const container = document.getElementById('promptsContainer');
+        const card = createPromptCard(promptIndex, prompt, context);
+        container.appendChild(card);
+        promptIndex++;
+      }
+
+      // Funktion för att duplicera en prompt
+      function duplicatePrompt(index) {
+        const promptValue = document.querySelector(`textarea[name="prompts[${index}][prompt]"]`).value;
+        const contextValue = document.querySelector(`textarea[name="prompts[${index}][context]"]`).value;
+        addPrompt(promptValue, contextValue);
+      }
+
+      // Funktion för att ta bort en prompt
+      function removePrompt(index, button) {
+        const card = button.parentElement.parentElement;
+        card.parentElement.removeChild(card);
+      }
+
+      // Om det finns tidigare data, förfylla formuläret
+      if (compareData && compareData.prompts && compareData.prompts.length > 0) {
+        compareData.prompts.forEach(promptObj => {
+          addPrompt(promptObj.prompt, promptObj.context);
+        });
+      } else {
+        // Lägg till en initial prompt om ingen data finns
+        addPrompt();
+      }
+
+      // Sätt in iterationsvärdet om det finns
+      if (compareData && compareData.iterations) {
+        document.getElementById('iterations').value = compareData.iterations;
+      }
+
+      // Sätt in expectedResult om det finns
+      if (compareData && compareData.expectedResult) {
+        document.getElementById('expectedResult').value = compareData.expectedResult;
+      }
+
+      // Event-lyssnare för att lägga till nya promptar
+      document.getElementById('addPromptBtn').addEventListener('click', () => {
+        addPrompt();
+      });
+
+      // Funktion för att visa/dölja systemprompten
+      function toggleSystemPrompt() {
+        const systemPromptContent = document.getElementById('systemPromptContent');
+        systemPromptContent.style.display = systemPromptContent.style.display === 'none' ? 'block' : 'none';
+      }
+
+      // Visa spinner när formuläret skickas
+      const compareForm = document.getElementById('compareForm');
+      compareForm.addEventListener('submit', function() {
+        document.getElementById('loadingSpinner').classList.remove('hidden');
+      });
+    </script>
+  </div>
+</body>
+</html>

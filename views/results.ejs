@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Resultat av jämförelse</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    pre {
+      text-indent: 0;
+      margin: 0; /* Tar bort eventuella marginaler */
+      padding: 0; /* Tar bort eventuell padding */
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+  <div class="container mx-auto my-8 p-4">
+    <h1 class="text-4xl font-bold mb-6 text-center">Resultat av jämförelse</h1>
+
+    <!-- Systemprompt-sektion -->
+    <div class="bg-white p-4 rounded-lg shadow-md my-6">
+      <div class="flex justify-between items-center">
+        <h3 class="text-xl font-semibold mb-2">Systemprompt</h3>
+        <button type="button" onclick="toggleSystemPrompt()" class="bg-blue-500 text-white py-1 px-3 rounded shadow hover:bg-blue-700">
+          Visa/Dölj Systemprompt
+        </button>
+      </div>
+      <pre id="systemPromptContent" class="bg-gray-50 p-3 rounded break-words whitespace-pre-wrap overflow-auto max-h-96 max-w-full" style="display: none;">
+        <%= systemPrompt %>
+      </pre>
+    </div>
+
+    <% results.forEach(function(result, index) { %>
+      <div class="bg-white rounded-lg shadow-md mb-6">
+        <!-- Prompt och Kontext full bredd -->
+        <div class="p-4">
+          <p class="font-medium text-indigo-700">Prompt <%= index + 1 %>:</p>
+          <pre class="bg-gray-100 p-3 rounded mb-2 break-words whitespace-pre-wrap overflow-auto max-w-full">
+            <%= result.prompt %>
+          </pre>
+          <p class="font-medium text-indigo-700">Kontext:</p>
+          <pre class="bg-gray-100 p-3 rounded mb-4 break-words whitespace-pre-wrap overflow-auto max-w-full">
+            <%= result.context %>
+          </pre>
+
+          <% if (result.expectedResult && result.expectedResult.trim() !== '') { %>
+            <div class="bg-green-100 p-4 rounded mb-4">
+              <p class="font-medium">Förväntad effekt:</p>
+              <pre class="break-words whitespace-pre-wrap overflow-auto max-w-full">
+                <%= result.expectedResult %>
+              </pre>
+            </div>
+          <% } %>
+        </div>
+
+        <% if (result.consistency !== null) { %>
+          <div class="flex items-center justify-center mb-4">
+            <p class="font-semibold text-lg mr-2">Konsistens mellan svaren:</p>
+            <span class="<%= result.consistency >= 80 ? 'text-green-600' : (result.consistency >= 50 ? 'text-yellow-500' : 'text-red-600') %>">
+              <i class="<%= result.consistency >= 80 ? 'fas fa-check-circle' : (result.consistency >= 50 ? 'fas fa-exclamation-circle' : 'fas fa-times-circle') %> mr-1"></i>
+              <%= result.consistency >= 80 ? 'Hög' : (result.consistency >= 50 ? 'Medelhög' : 'Låg') %> konsistens
+            </span>
+          </div>
+        <% } else { %>
+          <p class="italic text-gray-600">Konsistens ej tillämplig.</p>
+        <% } %>
+
+        <!-- Iterationer i tre kolumner -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+          <% result.outputs.forEach(function(outputObj, idx) { %>
+            <div class="bg-gray-50 p-4 rounded mb-4">
+              <h4 class="text-md font-semibold mb-2">Iteration <%= idx + 1 %>:</h4>
+
+              <div class="output mb-4">
+                <p class="font-medium text-purple-700">Genererat svar:</p>
+                <pre class="bg-gray-100 p-3 rounded break-words whitespace-pre-wrap overflow-auto max-w-full">
+                  <%= outputObj.output %>
+                </pre>
+              </div>
+
+              <% if (outputObj.evaluation) { %>
+                <div>
+                  <p class="font-medium text-purple-700">Utvärdering av svar:</p>
+                  <p>Poäng: <%= outputObj.evaluation.score %> av 10</p>
+                  <p>Motivering:</p>
+                  <pre class="bg-gray-100 p-3 rounded break-words whitespace-pre-wrap overflow-auto max-w-full">
+                    <%= outputObj.evaluation.reasoning %>
+                  </pre>
+                </div>
+              <% } else { %>
+                <p class="italic text-gray-600">Ingen utvärdering utförd.</p>
+              <% } %>
+            </div>
+          <% }); %>
+        </div>
+
+        <% if (result.consistencyAnalysis) { %>
+          <div class="p-4 bg-gray-100 rounded">
+            <h4 class="text-md font-semibold mb-2">AI:s analys av konsistens:</h4>
+            <p class="whitespace-pre-wrap text-gray-700"><%= result.consistencyAnalysis %></p>
+          </div>
+        <% } %>
+      </div>
+    <% }); %>
+
+    <a href="/compare" class="block mt-8 text-center bg-blue-600 text-white py-2 px-5 rounded shadow hover:bg-blue-800">
+      Tillbaka till jämförelse
+    </a>
+  </div>
+
+  <script>
+    // Funktion för att visa/dölja systemprompten
+    function toggleSystemPrompt() {
+      const systemPromptContent = document.getElementById('systemPromptContent');
+      systemPromptContent.style.display = systemPromptContent.style.display === 'none' ? 'block' : 'none';
+    }
+  </script>
+</body>
+</html>
